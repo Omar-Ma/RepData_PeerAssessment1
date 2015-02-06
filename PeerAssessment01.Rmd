@@ -1,22 +1,113 @@
 ---
-title: "Project 01"
-author: "Omar"
+title: "Peer Assessment 01"
+author: "Yujie Ma"
 date: "February 5, 2015"
 output: html_document
 ---
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+First of all, let's load the data, and check the first and last six rows of the dataset.
 
-```{r}
-summary(cars)
+```{r, echo=TRUE}
+data<-read.csv("activity.csv")
+head(data)
+tail(data)
+```
+We can see that there might be a lot of missing values of the variable "steps" in the dataset.
+
+
+Then we need to calculate the total number of steps taken per day. To do so, we need tsplit() functions to make the dataset into different groups by dates, and then calculate the total number of steps taken per day.
+```{r, echo=TRUE}
+data1 <- split(data$steps, data$date)
+totalSteps<-sapply(data1, sum,na.rm=TRUE) 
+totalSteps
 ```
 
-You can also embed plots, for example:
 
-```{r, echo=FALSE}
-plot(cars)
+Then we can make a histogram of the total number of steps taken each day
+```{r, echo=TRUE}
+dateRange<-seq(as.Date("2012-10-01"), by=1, len=61)
+plot(dateRange,totalSteps,type="h",col="red",lwd="7",main="Total Number of Steps Taken Each Day",xlab="Date",ylab="Total Number of Steps")
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+We can also calculate and report the mean and median of the total number of steps taken per day.
+```{r, echo=TRUE}
+meanOfTotalSteps<-mean(totalSteps)
+meanOfTotalSteps
+medianOfTotalSteps<-median(totalSteps)
+medianOfTotalSteps
+```
+
+
+Next we'll make a time series plot of the 5-minute interval and the average number of steps taken, averaged across all days. To to so, we need to divide the dataset into different groups by time intervals, calculate the mean number of steps in each interval, and then make the plot.
+```{r, echo=TRUE}
+data2 <- split(data$steps, data$interval)
+meanSteps<-sapply(data2, mean,na.rm=TRUE)
+interval=matrix(data = NA, nrow = 288, ncol = 2)
+interval[,1]<-data$interval[1:288]
+for (i in 1:288){
+    interval[i,1]<-toString(interval[i,1])
+}
+plot(interval[,1],meanSteps,type="l",col="blue",lwd="2",main="Average Steps in Each Time Interval",xlab="Time Interval",ylab="Average Steps")
+```
+
+
+Then we'll write a loop to find the interval with the the maximum number of steps.
+```{r, echo=TRUE}
+max<-meanSteps[1]
+for (i in 1:288){
+  if (meanSteps[i]>max)
+    max<-meanSteps[i]
+}
+max
+```
+We can see that the in interval with the the maximum number of steps is 08:35-08:40.
+
+
+Next we'll calculate and report the total number of missing values in the dataset
+```{r, echo=TRUE}
+sum(is.na(data))
+```
+Thus there are 2304 missing values. We can fill in all of the missing values in the dataset by using the mean for that interval. First of all, we need to check whether there is an interval full of missing values.
+
+```{r, echo=TRUE}
+for (i in 1:288){
+ if (sum(is.na(data2[[interval[i,1]]]))==238)
+   interval[i,1]
+}
+```
+Since there is no output for the code above, we can conclude that there is no interval full of missing values. Then we can fill in all of the missing values.
+
+```{r, echo=TRUE}
+data3<-matrix(data = NA, nrow = 288, ncol = 2)
+for (i in 1:288){
+    interval[i,2]=mean(data2[[interval[i,1]]],na.rm=TRUE)
+    data3[i,1]<-as.numeric(interval[i,1])
+    data3[i,2]<-as.numeric(interval[i,2])
+}
+data4<-merge(data,data3,by.x="interval",by.y=1)
+for (i in 1:17568){
+ if (is.na(data4$steps[i])==1)
+   data4$steps[i]=data4$V2[i]
+}
+data5<-subset(data4,select=c(interval,steps,date))
+sum(is.na(data5))
+```
+
+The output "0" means dataset "data5" no longer has any missing values. 
+
+Next we are going to make a histogram of the total number of steps taken each day and calculate and the mean and median total number of steps taken per day. 
+
+```{r, echo=TRUE}
+data6 <- split(data5$steps, data5$date)
+totalSteps_1<-sapply(data6, sum,na.rm=TRUE) 
+plot(dateRange,totalSteps_1,type="h",col="red",lwd="7",main="Total Number of Steps Taken Each Day",xlab="Date",ylab="Total Number of Steps")
+mean(totalSteps_1)
+medianOfTotalSteps<-median(totalSteps_1)
+medianOfTotalSteps
+```
+
+The mean value changed from 9354.23 to 10766.19, and the meadian changed from 10395 to 10766.19. Imputing missing data made the estimates of the total daily number of steps become bigger.
+
+
